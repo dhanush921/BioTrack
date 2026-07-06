@@ -30,6 +30,9 @@ function readCollectionLocal(collection) {
   if (!fs.existsSync(filePath)) {
     filePath = path.join(path.resolve('data'), `${collection}.json`);
   }
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(path.resolve('backend/data'), `${collection}.json`);
+  }
   if (!fs.existsSync(filePath)) return [];
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
