@@ -1,3 +1,5 @@
+import https from 'https';
+
 /**
  * Firebase Firestore REST API client.
  *
@@ -13,6 +15,52 @@ const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || process.env.VITE_FIREBA
 const BASE_URL = FIREBASE_PROJECT_ID
   ? `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`
   : null;
+
+function httpFetch(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    try {
+      const parsedUrl = new URL(url);
+      const reqOptions = {
+        method: options.method || 'GET',
+        headers: options.headers || {},
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        port: 443
+      };
+
+      const req = https.request(reqOptions, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          resolve({
+            ok: res.statusCode >= 200 && res.statusCode < 300,
+            status: res.statusCode,
+            text: async () => data,
+            json: async () => {
+              try {
+                return JSON.parse(data);
+              } catch (e) {
+                return {};
+              }
+            }
+          });
+        });
+      });
+
+      req.on('error', (err) => {
+        reject(err);
+      });
+
+      if (options.body) {
+        req.write(options.body);
+      }
+      req.end();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 
 // Convert Firestore REST document fields to plain JS object
 function fromFirestore(fields = {}) {
@@ -81,7 +129,7 @@ if (BASE_URL) {
             let pageToken = null;
             do {
               const url = apiUrl(`/${col}`) + (pageToken ? `&pageToken=${pageToken}` : '');
-              const res = await fetch(url);
+              const res = await httpFetch(url);
               if (!res.ok) {
                 const err = await res.text();
                 console.error(`[Firestore REST] collection.get error ${res.status}:`, err);
@@ -113,7 +161,7 @@ if (BASE_URL) {
               try {
                 const fields = toFirestore(data);
                 const url = apiUrl(`/${col}/${docId}`);
-                const res = await fetch(url, {
+                const res = await httpFetch(url, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ fields }),
@@ -129,7 +177,7 @@ if (BASE_URL) {
             async get() {
               try {
                 const url = apiUrl(`/${col}/${docId}`);
-                const res = await fetch(url);
+                const res = await httpFetch(url);
                 if (!res.ok) return { exists: false, data: () => null };
                 const json = await res.json();
                 return {
@@ -144,7 +192,7 @@ if (BASE_URL) {
             async delete() {
               try {
                 const url = apiUrl(`/${col}/${docId}`);
-                const res = await fetch(url, { method: 'DELETE' });
+                const res = await httpFetch(url, { method: 'DELETE' });
                 if (!res.ok) {
                   const err = await res.text();
                   console.error(`[Firestore REST] doc.delete error ${res.status}:`, err);
