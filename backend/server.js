@@ -34,6 +34,14 @@ app.use(express.json());
 // Initialize default data if not present
 await initSeedData();
 
+// Normalize Vercel path prefix stripping
+app.use((req, res, next) => {
+  if (req.url && !req.url.startsWith('/api')) {
+    req.url = '/api' + req.url;
+  }
+  next();
+});
+
 // Register routers
 app.use('/api/auth', authRouter);
 app.use('/api/equipment', equipmentRouter);
