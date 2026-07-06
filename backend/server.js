@@ -32,7 +32,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 // Initialize default data if not present
-await initSeedData();
+initSeedData().catch(err => console.error('[BioTrack] Database seed error:', err));
 
 // Normalize path prefix for Vercel & Netlify
 app.use((req, res, next) => {
