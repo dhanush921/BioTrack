@@ -26,7 +26,10 @@ if (!fs.existsSync(DATA_DIR)) {
 
 // Load a single collection from local JSON file
 function readCollectionLocal(collection) {
-  const filePath = path.join(DATA_DIR, `${collection}.json`);
+  let filePath = path.join(DATA_DIR, `${collection}.json`);
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(path.resolve('data'), `${collection}.json`);
+  }
   if (!fs.existsSync(filePath)) return [];
   try {
     const raw = fs.readFileSync(filePath, 'utf8');

@@ -204,7 +204,7 @@ if (BASE_URL) {
           };
         },
 
-        // Batch write (simplified: sequential for REST)
+        // Batch write (simplified: parallel for REST)
         batch() {
           const ops = [];
           return {
@@ -213,9 +213,7 @@ if (BASE_URL) {
               return this;
             },
             async commit() {
-              for (const op of ops) {
-                await op.docRef.set(op.data);
-              }
+              await Promise.all(ops.map(op => op.docRef.set(op.data)));
             },
           };
         },
@@ -228,7 +226,7 @@ if (BASE_URL) {
       return {
         set(docRef, data) { ops.push({ docRef, data }); return this; },
         async commit() {
-          for (const op of ops) await op.docRef.set(op.data);
+          await Promise.all(ops.map(op => op.docRef.set(op.data)));
         },
       };
     },
