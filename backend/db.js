@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { db as firestoreDb } from './firebase.js';
 
-const DATA_DIR = process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT 
+const DATA_DIR = process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT || process.env.VERCEL
   ? path.join('/tmp', 'data')
   : path.resolve('data');
 
