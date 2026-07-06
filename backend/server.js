@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 
 import db, { initSeedData } from './db.js';
+import { db as firestoreDb } from './firebase.js';
 import authRouter from './routes/auth.js';
 import equipmentRouter from './routes/equipment.js';
 import maintenanceRouter from './routes/maintenance.js';
@@ -62,10 +63,17 @@ app.use('/api/contracts', getRouter(contractsRouter));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
+  const firebaseApiKey = process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY;
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    database: 'local-json-db'
+    database: 'local-json-db',
+    firestore: {
+      projectId: firebaseProjectId || 'missing',
+      apiKeyLength: firebaseApiKey ? firebaseApiKey.length : 0,
+      isEnabled: !!firestoreDb
+    }
   });
 });
 
