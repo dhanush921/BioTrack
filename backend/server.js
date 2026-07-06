@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 
-import db, { initSeedData } from './db.js';
+import db, { initSeedData, syncWithFirestore } from './db.js';
 import { db as firestoreDb } from './firebase.js';
 import authRouter from './routes/auth.js';
 import equipmentRouter from './routes/equipment.js';
@@ -55,6 +55,7 @@ async function ensureDbInitialized() {
 app.use(async (req, res, next) => {
   try {
     await ensureDbInitialized();
+    await syncWithFirestore();
     next();
   } catch (err) {
     next(err);

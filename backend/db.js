@@ -58,8 +58,7 @@ export async function syncWithFirestore() {
   const collections = ['users', 'equipment', 'maintenance', 'breakdowns', 'contracts', 'inventory', 'logs'];
   
   if (firestoreDb) {
-    console.log('[Firebase] Starting Firestore database sync...');
-    for (const col of collections) {
+    await Promise.all(collections.map(async (col) => {
       try {
         const snapshot = await firestoreDb.collection(col).get();
         if (snapshot.empty) {
@@ -93,8 +92,7 @@ export async function syncWithFirestore() {
         // Fallback to local files
         cache[col] = readCollectionLocal(col);
       }
-    }
-    console.log('[Firebase] Firestore database sync complete.');
+    }));
   } else {
     console.log('[Firebase] Offline mode: loading local database files.');
     for (const col of collections) {
