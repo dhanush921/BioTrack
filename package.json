@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "description": "Smart Biomedical Equipment Management System",
   "private": true,
+  "type": "module",
   "scripts": {
     "install:all": "npm.cmd install && npm.cmd install --prefix backend && npm.cmd install --prefix frontend",
     "start:backend": "npm.cmd start --prefix backend",
     "start:frontend": "npm.cmd run dev --prefix frontend",
-    "dev": "concurrently \"npm.cmd run start:backend\" \"npm.cmd run start:frontend\""
+    "dev": "concurrently \"npm.cmd run start:backend\" \"npm.cmd run start:frontend\"",
+    "build": "npm run build --prefix frontend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
