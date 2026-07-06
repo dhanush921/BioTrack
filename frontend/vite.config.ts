@@ -28,11 +28,13 @@ export default defineConfig({
           // Icon library
           'vendor-lucide': ['lucide-react'],
           // PDF/export utilities
-          'vendor-pdf': ['jspdf', 'html2canvas'],
-          // DOMPurify (sanitization)
-          'vendor-dompurify': ['dompurify'],
-          // Markdown
-          'vendor-markdown': ['marked'],
+          'vendor-pdf': ['jspdf'],
+          // Excel export
+          'vendor-xlsx': ['xlsx'],
+          // QR code scanner
+          'vendor-qr': ['html5-qrcode', 'qrcode'],
+          // Firebase client
+          'vendor-firebase': ['firebase'],
         }
       }
     }
