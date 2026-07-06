@@ -1,0 +1,25 @@
+# Node dependency directories
+node_modules/
+**/node_modules/
+
+# Local databases and caches
+data/
+**/data/*.json
+
+# Local environment variable configuration files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel deployment metadata
+.vercel
+
+# Production build outputs
+dist/
+**/dist/
+
+# OS metadata
+.DS_Store
+Thumbs.db
