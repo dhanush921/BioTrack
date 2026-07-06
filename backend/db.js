@@ -759,3 +759,9 @@ export async function initSeedData() {
 }
 
 export default db;
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = db;
+  module.exports.initSeedData = initSeedData;
+  module.exports.syncWithFirestore = syncWithFirestore;
+}
