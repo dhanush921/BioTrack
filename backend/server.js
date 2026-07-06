@@ -32,8 +32,35 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json());
 
-// Initialize default data if not present
-initSeedData().catch(err => console.error('[BioTrack] Database seed error:', err));
+let dbInitialized = false;
+let dbInitializationPromise = null;
+
+async function ensureDbInitialized() {
+  if (dbInitialized) return;
+  if (!dbInitializationPromise) {
+    dbInitializationPromise = (async () => {
+      try {
+        await initSeedData();
+        dbInitialized = true;
+      } catch (err) {
+        console.error('[BioTrack] DB Initialization failed:', err);
+        dbInitializationPromise = null;
+        throw err;
+      }
+    })();
+  }
+  await dbInitializationPromise;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureDbInitialized();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 
 // Normalize path prefix for Netlify only (Vercel routes correctly via vercel.json)
 app.use((req, res, next) => {

@@ -15,7 +15,7 @@ router.get('/', authenticate, (req, res, next) => {
 });
 
 // CREATE CONTRACT
-router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer']), (req, res, next) => {
+router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer']), async (req, res, next) => {
   try {
     const { contractNumber, vendor, contractType, equipmentId, startDate, endDate, cost, slaResponseHours, notes } = req.body;
 
@@ -38,7 +38,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
       status = 'Due Soon';
     }
 
-    const newContract = db.add('contracts', {
+    const newContract = await db.add('contracts', {
       contractNumber,
       vendor,
       contractType,
@@ -57,7 +57,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
       userName: req.user.name,
       action: 'Create Contract',
       details: `Added ${contractType} contract (${contractNumber}) for ${equipment.name} with ${vendor}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log contract create:', err.message));
 
     res.status(201).json(newContract);
   } catch (err) {
@@ -66,10 +66,10 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
 });
 
 // UPDATE CONTRACT
-router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer']), (req, res, next) => {
+router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer']), async (req, res, next) => {
   try {
     const updates = req.body;
-    const updated = db.update('contracts', req.params.id, updates);
+    const updated = await db.update('contracts', req.params.id, updates);
     if (!updated) {
       return res.status(404).json({ error: 'Contract not found' });
     }
@@ -79,7 +79,7 @@ router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Enginee
       userName: req.user.name,
       action: 'Update Contract',
       details: `Modified parameters on AMC/CMC contract ${updated.contractNumber}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log contract update:', err.message));
 
     res.json(updated);
   } catch (err) {
@@ -88,21 +88,21 @@ router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Enginee
 });
 
 // DELETE CONTRACT
-router.delete('/:id', authenticate, authorize(['Administrator']), (req, res, next) => {
+router.delete('/:id', authenticate, authorize(['Administrator']), async (req, res, next) => {
   try {
     const contract = db.get('contracts', req.params.id);
     if (!contract) {
       return res.status(404).json({ error: 'Contract not found' });
     }
 
-    db.delete('contracts', req.params.id);
+    await db.delete('contracts', req.params.id);
 
     db.add('logs', {
       userId: req.user.id,
       userName: req.user.name,
       action: 'Delete Contract',
       details: `Removed maintenance contract ${contract.contractNumber}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log contract delete:', err.message));
 
     res.json({ success: true });
   } catch (err) {

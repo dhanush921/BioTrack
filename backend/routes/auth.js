@@ -26,8 +26,8 @@ router.post('/signup', async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Save user
-    const newUser = db.add('users', {
+    // Save user — await ensures Firestore write completes before response
+    const newUser = await db.add('users', {
       email: email.toLowerCase(),
       name,
       role: role || 'Department Staff',
@@ -55,13 +55,13 @@ router.post('/signup', async (req, res, next) => {
     console.log(`Instant Approval Link: ${approvalLink}`);
     console.log(`==================================================\n`);
 
-    // Log action
+    // Log action (fire and forget - logs are less critical)
     db.add('logs', {
       userId: newUser.id,
       userName: newUser.name,
       action: 'User Signup',
       details: `New account registered (PENDING APPROVAL) as ${newUser.role} in ${newUser.department}. Alert sent to chippadadhanush274@gmail.com`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log signup:', err.message));
 
     const { password: _, ...userWithoutPassword } = newUser;
 
@@ -98,13 +98,13 @@ router.post('/login', async (req, res, next) => {
 
     const { password: _, ...userWithoutPassword } = user;
 
-    // Log action
+    // Log action (fire and forget)
     db.add('logs', {
       userId: user.id,
       userName: user.name,
       action: 'User Login',
       details: 'User authenticated successfully.'
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log login:', err.message));
 
     res.json({
       token,
@@ -137,7 +137,7 @@ router.put('/profile', authenticate, async (req, res, next) => {
       updates.password = await bcrypt.hash(password, salt);
     }
 
-    const updatedUser = db.update('users', req.user.id, updates);
+    const updatedUser = await db.update('users', req.user.id, updates);
     const { password: _, ...userWithoutPassword } = updatedUser;
 
     res.json(userWithoutPassword);
@@ -147,40 +147,44 @@ router.put('/profile', authenticate, async (req, res, next) => {
 });
 
 // FORGOT PASSWORD (OTP GENERATION)
-router.post('/forgot-password', (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ error: 'Email address is required.' });
-  }
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
 
-  const user = db.findOne('users', { email: email.toLowerCase() });
-  if (!user) {
-    return res.json({ 
-      message: 'If an account exists with this email, a verification code has been dispatched.',
-      userId: null
+    const user = db.findOne('users', { email: email.toLowerCase() });
+    if (!user) {
+      return res.json({ 
+        message: 'If an account exists with this email, a verification code has been dispatched.',
+        userId: null
+      });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    await db.update('users', user.id, {
+      resetOtp: otp,
+      resetOtpExpiry: Date.now() + 10 * 60 * 1000
     });
+
+    console.log(`\n==================================================`);
+    console.log(`[SMTP Mail Server] SENDING TRANSACTIONAL EMAIL`);
+    console.log(`To: ${user.email}`);
+    console.log(`Subject: [BioTrack] Password Reset Verification Code`);
+    console.log(`Body: Hello, your 6-digit verification code is: ${otp}`);
+    console.log(`This code is valid for 10 minutes.`);
+    console.log(`==================================================\n`);
+
+    res.json({
+      message: 'If an account exists with this email, a verification code has been dispatched.',
+      userId: user.id,
+      debugOtp: otp
+    });
+  } catch (err) {
+    next(err);
   }
-
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  db.update('users', user.id, {
-    resetOtp: otp,
-    resetOtpExpiry: Date.now() + 10 * 60 * 1000
-  });
-
-  console.log(`\n==================================================`);
-  console.log(`[SMTP Mail Server] SENDING TRANSACTIONAL EMAIL`);
-  console.log(`To: ${user.email}`);
-  console.log(`Subject: [BioTrack] Password Reset Verification Code`);
-  console.log(`Body: Hello, your 6-digit verification code is: ${otp}`);
-  console.log(`This code is valid for 10 minutes.`);
-  console.log(`==================================================\n`);
-
-  res.json({
-    message: 'If an account exists with this email, a verification code has been dispatched.',
-    userId: user.id,
-    debugOtp: otp
-  });
 });
 
 // PUBLIC RESET PASSWORD (OTP VERIFICATION)
@@ -207,7 +211,7 @@ router.post('/reset-password', async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    db.update('users', user.id, {
+    await db.update('users', user.id, {
       password: hashedPassword,
       resetOtp: null,
       resetOtpExpiry: null
@@ -218,7 +222,7 @@ router.post('/reset-password', async (req, res, next) => {
       userName: user.name,
       action: 'Password Recovery Reset',
       details: `Password recovered and reset successfully via OTP verification code`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log password reset:', err.message));
 
     res.json({ message: 'Password reset successfully!' });
   } catch (err) {

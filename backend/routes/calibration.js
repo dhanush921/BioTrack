@@ -15,7 +15,7 @@ router.get('/', authenticate, (req, res, next) => {
 });
 
 // LOG CALIBRATION
-router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), (req, res, next) => {
+router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), async (req, res, next) => {
   try {
     const { equipmentId, calibrationDate, nextDueDate, frequency, performedBy, certificateNumber, notes } = req.body;
 
@@ -38,8 +38,8 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
       status = 'Due Soon';
     }
 
-    // Create Calibration Entry
-    const newCalibration = db.add('calibration', {
+    // Create Calibration Entry — await ensures Firestore write completes before response
+    const newCalibration = await db.add('calibration', {
       equipmentId,
       equipmentName: equipment.name,
       calibrationDate,
@@ -52,7 +52,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
     });
 
     // Update equipment's calibration markers
-    db.update('equipment', equipmentId, {
+    await db.update('equipment', equipmentId, {
       lastCalibrationDate: calibrationDate,
       nextCalibrationDate: nextDueDate
     });
@@ -62,7 +62,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
       userName: req.user.name,
       action: 'Log Calibration',
       details: `Logged calibration for ${equipment.name} (${equipmentId}). Next due on ${nextDueDate}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log calibration:', err.message));
 
     res.status(201).json(newCalibration);
   } catch (err) {

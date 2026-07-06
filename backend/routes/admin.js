@@ -50,7 +50,7 @@ router.post('/users', authenticate, authorize(['Administrator']), async (req, re
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = db.add('users', {
+    const newUser = await db.add('users', {
       email: email.toLowerCase(),
       name,
       role,
@@ -67,7 +67,7 @@ router.post('/users', authenticate, authorize(['Administrator']), async (req, re
       userName: req.user.name,
       action: 'Admin Create User',
       details: `Created new user account: ${name} (${email}) as ${role} in ${department}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log admin create user:', err.message));
 
     const { password: _, ...userWithoutPassword } = newUser;
     res.status(201).json(userWithoutPassword);
@@ -77,7 +77,7 @@ router.post('/users', authenticate, authorize(['Administrator']), async (req, re
 });
 
 // UPDATE USER ROLE OR DEPT
-router.put('/users/:id', authenticate, authorize(['Administrator']), (req, res, next) => {
+router.put('/users/:id', authenticate, authorize(['Administrator']), async (req, res, next) => {
   try {
     const { role, department, approved } = req.body;
     const updates = {};
@@ -85,7 +85,7 @@ router.put('/users/:id', authenticate, authorize(['Administrator']), (req, res, 
     if (department) updates.department = department;
     if (approved !== undefined) updates.approved = approved;
 
-    const updatedUser = db.update('users', req.params.id, updates);
+    const updatedUser = await db.update('users', req.params.id, updates);
     if (!updatedUser) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -97,7 +97,7 @@ router.put('/users/:id', authenticate, authorize(['Administrator']), (req, res, 
       userName: req.user.name,
       action: 'Admin Update User',
       details: `Modified credentials/roles for user ${updatedUser.name} (${updatedUser.id})`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log admin update user:', err.message));
 
     res.json(userWithoutPassword);
   } catch (err) {

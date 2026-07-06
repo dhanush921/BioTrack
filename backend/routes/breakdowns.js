@@ -15,7 +15,7 @@ router.get('/', authenticate, (req, res, next) => {
 });
 
 // REPORT BREAKDOWN (TICKET CREATION)
-router.post('/', authenticate, (req, res, next) => {
+router.post('/', authenticate, async (req, res, next) => {
   try {
     const { equipmentId, problemDescription, priority } = req.body;
 
@@ -28,8 +28,8 @@ router.post('/', authenticate, (req, res, next) => {
       return res.status(404).json({ error: 'Equipment asset not found' });
     }
 
-    // Create ticket
-    const ticket = db.add('breakdowns', {
+    // Create ticket — await ensures Firestore write completes before response
+    const ticket = await db.add('breakdowns', {
       equipmentId,
       equipmentName: equipment.name,
       reportedBy: req.user.name,
@@ -48,14 +48,14 @@ router.post('/', authenticate, (req, res, next) => {
 
     // Update equipment status to 'Out of Service' or 'Under Maintenance' depending on priority
     const newEquipStatus = (priority === 'Critical' || priority === 'High') ? 'Out of Service' : 'Under Maintenance';
-    db.update('equipment', equipmentId, { status: newEquipStatus });
+    await db.update('equipment', equipmentId, { status: newEquipStatus });
 
     db.add('logs', {
       userId: req.user.id,
       userName: req.user.name,
       action: 'Report Breakdown',
       details: `Reported breakdown for ${equipment.name} (${equipmentId}) with priority ${priority}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log breakdown report:', err.message));
 
     res.status(201).json(ticket);
   } catch (err) {
@@ -64,7 +64,7 @@ router.post('/', authenticate, (req, res, next) => {
 });
 
 // UPDATE BREAKDOWN TICKET (ASSIGN, PROGRESS, CLOSE)
-router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), (req, res, next) => {
+router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), async (req, res, next) => {
   try {
     const { assignedEngineer, status, estimatedCompletion, actualCompletion, repairCost, solution, downtimeHours } = req.body;
     const ticket = db.get('breakdowns', req.params.id);
@@ -94,20 +94,20 @@ router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Enginee
       }
       
       // Sync equipment back to 'Active' upon completing breakdown repair
-      db.update('equipment', ticket.equipmentId, { status: 'Active' });
+      await db.update('equipment', ticket.equipmentId, { status: 'Active' });
     } else if (status === 'In Progress') {
       // Sync equipment to 'Under Maintenance'
-      db.update('equipment', ticket.equipmentId, { status: 'Under Maintenance' });
+      await db.update('equipment', ticket.equipmentId, { status: 'Under Maintenance' });
     }
 
-    const updatedTicket = db.update('breakdowns', req.params.id, updates);
+    const updatedTicket = await db.update('breakdowns', req.params.id, updates);
 
     db.add('logs', {
       userId: req.user.id,
       userName: req.user.name,
       action: 'Update Ticket',
       details: `Modified breakdown ticket ${ticket.id} status to ${status || ticket.status}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log ticket update:', err.message));
 
     res.json(updatedTicket);
   } catch (err) {

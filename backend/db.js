@@ -103,22 +103,29 @@ export async function syncWithFirestore() {
   }
 }
 
-// Background write updater
-function persistDoc(collection, docId, data) {
+// Export array of pending write promises so the server can await them before completing requests
+export const pendingPromises = [];
+
+// Background write updater - returns promise so callers can await persistence
+async function persistDoc(collection, docId, data) {
   writeCollectionLocal(collection, cache[collection]);
   if (firestoreDb) {
-    firestoreDb.collection(collection).doc(docId).set(data).catch(err => {
+    try {
+      await firestoreDb.collection(collection).doc(docId).set(data);
+    } catch (err) {
       console.error(`[Firebase] Failed to write document ${docId} to collection ${collection}:`, err.message);
-    });
+    }
   }
 }
 
-function persistDeleteDoc(collection, docId) {
+async function persistDeleteDoc(collection, docId) {
   writeCollectionLocal(collection, cache[collection]);
   if (firestoreDb) {
-    firestoreDb.collection(collection).doc(docId).delete().catch(err => {
+    try {
+      await firestoreDb.collection(collection).doc(docId).delete();
+    } catch (err) {
       console.error(`[Firebase] Failed to delete document ${docId} from collection ${collection}:`, err.message);
-    });
+    }
   }
 }
 
@@ -156,8 +163,8 @@ const db = {
     });
   },
 
-  // Add an item (generates ID)
-  add(collection, data) {
+  // Add an item (generates ID) - returns a promise
+  async add(collection, data) {
     if (!cache[collection]) cache[collection] = [];
     const newItem = {
       id: crypto.randomUUID(),
@@ -166,12 +173,12 @@ const db = {
       ...data
     };
     cache[collection].push(newItem);
-    persistDoc(collection, newItem.id, newItem);
+    await persistDoc(collection, newItem.id, newItem);
     return newItem;
   },
 
-  // Set an item (requires explicit ID, overwrites or creates)
-  set(collection, id, data) {
+  // Set an item (requires explicit ID, overwrites or creates) - returns a promise
+  async set(collection, id, data) {
     if (!cache[collection]) cache[collection] = [];
     const items = cache[collection];
     const index = items.findIndex(item => item.id === id);
@@ -187,12 +194,13 @@ const db = {
       items.push(itemData);
     }
     const resultDoc = items[index !== -1 ? index : items.length - 1];
-    persistDoc(collection, id, resultDoc);
+    await persistDoc(collection, id, resultDoc);
     return resultDoc;
   },
 
   // Update specific fields on an item
-  update(collection, id, updates) {
+  // Update specific fields on an item - returns a promise
+  async update(collection, id, updates) {
     if (!cache[collection]) return null;
     const items = cache[collection];
     const index = items.findIndex(item => item.id === id);
@@ -204,19 +212,19 @@ const db = {
       updatedAt: new Date().toISOString()
     };
     items[index] = updatedItem;
-    persistDoc(collection, id, updatedItem);
+    await persistDoc(collection, id, updatedItem);
     return updatedItem;
   },
 
-  // Delete an item
-  delete(collection, id) {
+  // Delete an item - returns a promise
+  async delete(collection, id) {
     if (!cache[collection]) return false;
     const items = cache[collection];
     const index = items.findIndex(item => item.id === id);
     if (index === -1) return false;
     
     items.splice(index, 1);
-    persistDeleteDoc(collection, id);
+    await persistDeleteDoc(collection, id);
     return true;
   }
 };

@@ -15,7 +15,7 @@ router.get('/', authenticate, (req, res, next) => {
 });
 
 // ADD SPARE PART
-router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), (req, res, next) => {
+router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), async (req, res, next) => {
   try {
     const { name, partNumber, quantity, vendor, minimumStock, purchaseCost, location } = req.body;
 
@@ -23,7 +23,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
       return res.status(400).json({ error: 'Part Name, Part Number, and Quantity are required.' });
     }
 
-    const newPart = db.add('inventory', {
+    const newPart = await db.add('inventory', {
       name,
       partNumber,
       quantity: Number(quantity),
@@ -38,7 +38,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
       userName: req.user.name,
       action: 'Add Part',
       details: `Added new spare part: ${newPart.name} (${newPart.partNumber})`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log part add:', err.message));
 
     res.status(201).json(newPart);
   } catch (err) {
@@ -47,7 +47,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
 });
 
 // UPDATE SPARE PART
-router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), (req, res, next) => {
+router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), async (req, res, next) => {
   try {
     const { name, partNumber, quantity, vendor, minimumStock, purchaseCost, location } = req.body;
     const updates = {};
@@ -60,7 +60,7 @@ router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Enginee
     if (purchaseCost !== undefined) updates.purchaseCost = Number(purchaseCost);
     if (location !== undefined) updates.location = location;
 
-    const updatedPart = db.update('inventory', req.params.id, updates);
+    const updatedPart = await db.update('inventory', req.params.id, updates);
     if (!updatedPart) {
       return res.status(404).json({ error: 'Spare part not found' });
     }
@@ -70,7 +70,7 @@ router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Enginee
       userName: req.user.name,
       action: 'Update Part',
       details: `Updated details for spare part ${updatedPart.name} (${updatedPart.partNumber})`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log part update:', err.message));
 
     res.json(updatedPart);
   } catch (err) {
@@ -79,21 +79,21 @@ router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Enginee
 });
 
 // DELETE SPARE PART
-router.delete('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer']), (req, res, next) => {
+router.delete('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer']), async (req, res, next) => {
   try {
     const part = db.get('inventory', req.params.id);
     if (!part) {
       return res.status(404).json({ error: 'Spare part not found' });
     }
 
-    db.delete('inventory', req.params.id);
+    await db.delete('inventory', req.params.id);
 
     db.add('logs', {
       userId: req.user.id,
       userName: req.user.name,
       action: 'Delete Part',
       details: `Removed spare part ${part.name} from inventory.`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log part delete:', err.message));
 
     res.json({ success: true, message: `Spare part ${req.params.id} deleted successfully.` });
   } catch (err) {

@@ -122,7 +122,7 @@ router.get('/:id', authenticate, (req, res, next) => {
 });
 
 // CREATE NEW EQUIPMENT
-router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer']), (req, res, next) => {
+router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer']), async (req, res, next) => {
   try {
     const data = req.body;
     
@@ -137,7 +137,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
     const qrCode = `biotrack://equipment/${eqId}`;
     const barcode = data.barcode || `BAR-${data.manufacturer.substring(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const newEquipment = db.set('equipment', eqId, {
+    const newEquipment = await db.set('equipment', eqId, {
       ...data,
       qrCode,
       barcode,
@@ -149,7 +149,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
       userName: req.user.name,
       action: 'Register Equipment',
       details: `Created equipment asset ${newEquipment.name} (${newEquipment.id}) in ${newEquipment.department}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log equipment register:', err.message));
 
     res.status(201).json(newEquipment);
   } catch (err) {
@@ -158,9 +158,9 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
 });
 
 // UPDATE EQUIPMENT
-router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), (req, res, next) => {
+router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), async (req, res, next) => {
   try {
-    const updated = db.update('equipment', req.params.id, req.body);
+    const updated = await db.update('equipment', req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ error: 'Equipment not found' });
     }
@@ -170,7 +170,7 @@ router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Enginee
       userName: req.user.name,
       action: 'Update Equipment',
       details: `Modified fields on equipment asset ${updated.name} (${updated.id})`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log equipment update:', err.message));
 
     res.json(updated);
   } catch (err) {
@@ -179,21 +179,21 @@ router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Enginee
 });
 
 // DELETE/ARCHIVE EQUIPMENT
-router.delete('/:id', authenticate, authorize(['Administrator']), (req, res, next) => {
+router.delete('/:id', authenticate, authorize(['Administrator']), async (req, res, next) => {
   try {
     const item = db.get('equipment', req.params.id);
     if (!item) {
       return res.status(404).json({ error: 'Equipment not found' });
     }
     
-    db.delete('equipment', req.params.id);
+    await db.delete('equipment', req.params.id);
 
     db.add('logs', {
       userId: req.user.id,
       userName: req.user.name,
       action: 'Archive Equipment',
       details: `Archived/Deleted equipment asset ${item.name} (${item.id})`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log equipment archive:', err.message));
 
     res.json({ success: true, message: `Equipment ${req.params.id} has been archived successfully.` });
   } catch (err) {

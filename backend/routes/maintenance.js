@@ -15,7 +15,7 @@ router.get('/', authenticate, (req, res, next) => {
 });
 
 // CREATE MAINTENANCE SCHEDULE
-router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer']), (req, res, next) => {
+router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer']), async (req, res, next) => {
   try {
     const { equipmentId, type, frequency, checklist, scheduledDate, assignedTechnician, notes } = req.body;
 
@@ -28,7 +28,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
       return res.status(404).json({ error: 'Equipment asset not found' });
     }
 
-    const newSchedule = db.add('maintenance', {
+    const newSchedule = await db.add('maintenance', {
       equipmentId,
       equipmentName: equipment.name,
       type: type || 'Preventive',
@@ -47,7 +47,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
       userName: req.user.name,
       action: 'Schedule PM',
       details: `Scheduled ${frequency} maintenance for ${equipment.name} on ${scheduledDate}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log maintenance schedule:', err.message));
 
     res.status(201).json(newSchedule);
   } catch (err) {
@@ -56,7 +56,7 @@ router.post('/', authenticate, authorize(['Administrator', 'Biomedical Engineer'
 });
 
 // UPDATE MAINTENANCE TASK (CHECKLIST STATE, ASSIGNMENT, OR COMPLETE)
-router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), (req, res, next) => {
+router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Engineer', 'Technician']), async (req, res, next) => {
   try {
     const { checklist, status, notes, serviceReportUrl, cost } = req.body;
     const task = db.get('maintenance', req.params.id);
@@ -76,21 +76,21 @@ router.put('/:id', authenticate, authorize(['Administrator', 'Biomedical Enginee
         updates.completedAt = new Date().toISOString();
         
         // Also update associated equipment status to 'Active'
-        db.update('equipment', task.equipmentId, { status: 'Active' });
+        await db.update('equipment', task.equipmentId, { status: 'Active' });
       } else if (status === 'In Progress') {
         // Update equipment to 'Under Maintenance'
-        db.update('equipment', task.equipmentId, { status: 'Under Maintenance' });
+        await db.update('equipment', task.equipmentId, { status: 'Under Maintenance' });
       }
     }
 
-    const updatedTask = db.update('maintenance', req.params.id, updates);
+    const updatedTask = await db.update('maintenance', req.params.id, updates);
 
     db.add('logs', {
       userId: req.user.id,
       userName: req.user.name,
       action: 'Update PM',
       details: `Updated PM task ${task.id} status to ${status || task.status}`
-    });
+    }).catch(err => console.error('[BioTrack] Failed to log PM update:', err.message));
 
     res.json(updatedTask);
   } catch (err) {
