@@ -97,7 +97,7 @@ app.use((err, req, res, next) => {
 
 export default app;
 
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL && !process.env.NETLIFY) {
   app.listen(PORT, () => {
     console.log(`[BioTrack Backend] Server running on port ${PORT}`);
   });
