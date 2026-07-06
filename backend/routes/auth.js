@@ -63,6 +63,8 @@ router.post('/signup', async (req, res, next) => {
       details: `New account registered (PENDING APPROVAL) as ${newUser.role} in ${newUser.department}. Alert sent to chippadadhanush274@gmail.com`
     });
 
+    const { password: _, ...userWithoutPassword } = newUser;
+
     res.status(201).json({
       token,
       user: userWithoutPassword
