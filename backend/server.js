@@ -34,10 +34,15 @@ app.use(express.json());
 // Initialize default data if not present
 await initSeedData();
 
-// Normalize Vercel path prefix stripping
+// Normalize path prefix for Vercel & Netlify
 app.use((req, res, next) => {
-  if (req.url && !req.url.startsWith('/api')) {
-    req.url = '/api' + req.url;
+  if (req.url) {
+    if (req.url.startsWith('/.netlify/functions/api')) {
+      req.url = req.url.replace('/.netlify/functions/api', '/api');
+    }
+    if (!req.url.startsWith('/api')) {
+      req.url = '/api' + req.url;
+    }
   }
   next();
 });

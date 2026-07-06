@@ -11,6 +11,9 @@
     "dev": "concurrently \"npm.cmd run start:backend\" \"npm.cmd run start:frontend\"",
     "build": "cd frontend && npm install && npm run build"
   },
+  "dependencies": {
+    "serverless-http": "^3.2.0"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
