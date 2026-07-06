@@ -1,14 +1,21 @@
 {
   "cleanUrls": true,
-  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/:path*",
       "destination": "/api/index.js"
     },
     {
+      "source": "/assets/:path*",
+      "destination": "/dist/assets/:path*"
+    },
+    {
+      "source": "/favicon.svg",
+      "destination": "/dist/favicon.svg"
+    },
+    {
       "source": "/((?!api).*)",
-      "destination": "/index.html"
+      "destination": "/dist/index.html"
     }
   ]
 }
