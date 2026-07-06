@@ -34,13 +34,12 @@ app.use(express.json());
 // Initialize default data if not present
 initSeedData().catch(err => console.error('[BioTrack] Database seed error:', err));
 
-// Normalize path prefix for Vercel & Netlify
+// Normalize path prefix for Netlify only (Vercel routes correctly via vercel.json)
 app.use((req, res, next) => {
   if (req.url) {
     if (req.url.startsWith('/.netlify/functions/api')) {
       req.url = req.url.replace('/.netlify/functions/api', '/api');
-    }
-    if (!req.url.startsWith('/api')) {
+    } else if (process.env.NETLIFY && !req.url.startsWith('/api')) {
       req.url = '/api' + req.url;
     }
   }
