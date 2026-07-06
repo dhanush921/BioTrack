@@ -47,16 +47,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// Helper to resolve ESM default exports in CommonJS bundled environments
+const getRouter = (m) => m.default || m;
+
 // Register routers
-app.use('/api/auth', authRouter);
-app.use('/api/equipment', equipmentRouter);
-app.use('/api/maintenance', maintenanceRouter);
-app.use('/api/breakdowns', breakdownsRouter);
-app.use('/api/calibration', calibrationRouter);
-app.use('/api/inventory', inventoryRouter);
-app.use('/api/ai', aiRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/contracts', contractsRouter);
+app.use('/api/auth', getRouter(authRouter));
+app.use('/api/equipment', getRouter(equipmentRouter));
+app.use('/api/maintenance', getRouter(maintenanceRouter));
+app.use('/api/breakdowns', getRouter(breakdownsRouter));
+app.use('/api/calibration', getRouter(calibrationRouter));
+app.use('/api/inventory', getRouter(inventoryRouter));
+app.use('/api/ai', getRouter(aiRouter));
+app.use('/api/admin', getRouter(adminRouter));
+app.use('/api/contracts', getRouter(contractsRouter));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
