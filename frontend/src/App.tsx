@@ -1,33 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider, useToast } from './components/Toast';
 
-// Layouts & Components
+// Layouts & Components (always needed, keep eager)
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
-import { QRScanner } from './components/QRScanner';
-import { ThemeSelectorModal } from './components/ThemeSelectorModal';
-
-// Pages
-import { Login } from './pages/Auth/Login';
-import { AdminLogin } from './pages/Auth/AdminLogin';
-import { Signup } from './pages/Auth/Signup';
-import { ForgotPassword } from './pages/Auth/ForgotPassword';
-import { Dashboard } from './pages/Dashboard';
-import { EquipmentList } from './pages/Equipment/EquipmentList';
-import { MaintenanceList } from './pages/Maintenance/MaintenanceList';
-import { BreakdownList } from './pages/Breakdowns/BreakdownList';
-import { CalibrationList } from './pages/Calibration/CalibrationList';
-import { PartsInventory } from './pages/Inventory/PartsInventory';
-import { AIInsights } from './pages/AIInsights';
-import { Reports } from './pages/Reports';
-import { AdminPanel } from './pages/AdminPanel';
-import { Profile } from './pages/Profile';
-import { ContractsList } from './pages/Contracts/ContractsList';
-import { Analytics } from './pages/Analytics';
-import { CalendarView } from './pages/CalendarView';
 import { ShieldAlert } from 'lucide-react';
+
+// Lazy-load heavy components (split into separate JS chunks)
+const QRScanner = lazy(() => import('./components/QRScanner').then(m => ({ default: m.QRScanner })));
+const ThemeSelectorModal = lazy(() => import('./components/ThemeSelectorModal').then(m => ({ default: m.ThemeSelectorModal })));
+
+// Lazy-load all pages (each becomes its own JS chunk loaded on demand)
+const Login = lazy(() => import('./pages/Auth/Login').then(m => ({ default: m.Login })));
+const AdminLogin = lazy(() => import('./pages/Auth/AdminLogin').then(m => ({ default: m.AdminLogin })));
+const Signup = lazy(() => import('./pages/Auth/Signup').then(m => ({ default: m.Signup })));
+const ForgotPassword = lazy(() => import('./pages/Auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const EquipmentList = lazy(() => import('./pages/Equipment/EquipmentList').then(m => ({ default: m.EquipmentList })));
+const MaintenanceList = lazy(() => import('./pages/Maintenance/MaintenanceList').then(m => ({ default: m.MaintenanceList })));
+const BreakdownList = lazy(() => import('./pages/Breakdowns/BreakdownList').then(m => ({ default: m.BreakdownList })));
+const CalibrationList = lazy(() => import('./pages/Calibration/CalibrationList').then(m => ({ default: m.CalibrationList })));
+const PartsInventory = lazy(() => import('./pages/Inventory/PartsInventory').then(m => ({ default: m.PartsInventory })));
+const AIInsights = lazy(() => import('./pages/AIInsights').then(m => ({ default: m.AIInsights })));
+const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
+const AdminPanel = lazy(() => import('./pages/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
+const ContractsList = lazy(() => import('./pages/Contracts/ContractsList').then(m => ({ default: m.ContractsList })));
+const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m.Analytics })));
+const CalendarView = lazy(() => import('./pages/CalendarView').then(m => ({ default: m.CalendarView })));
+
+// Minimal loading fallback
+const PageLoader = () => (
+  <div className="flex-1 flex items-center justify-center bg-slate-950 min-h-[50vh]">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      <span className="text-slate-400 text-sm">Loading...</span>
+    </div>
+  </div>
+);
 
 // Route guards
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({ 
@@ -82,13 +94,17 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
       {/* Ask user theme preference on first launch */}
-      <ThemeSelectorModal onSelectTheme={(t) => setAppTheme(t)} />
+      <Suspense fallback={null}>
+        <ThemeSelectorModal onSelectTheme={(t) => setAppTheme(t)} />
+      </Suspense>
 
       {scannerOpen && (
-        <QRScanner 
-          onScanSuccess={handleQRScanSuccess} 
-          onClose={() => setScannerOpen(false)} 
-        />
+        <Suspense fallback={null}>
+          <QRScanner 
+            onScanSuccess={handleQRScanSuccess} 
+            onClose={() => setScannerOpen(false)} 
+          />
+        </Suspense>
       )}
 
       {user ? (
@@ -148,33 +164,35 @@ const AppContent: React.FC = () => {
               
               {/* Content Pages */}
               <main className="flex-grow overflow-y-auto">
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/equipment" element={<EquipmentList />} />
-                  <Route path="/maintenance" element={<MaintenanceList />} />
-                  <Route path="/breakdowns" element={<BreakdownList />} />
-                  <Route path="/calibration" element={<CalibrationList />} />
-                  <Route path="/inventory" element={<PartsInventory />} />
-                  <Route path="/insights" element={<AIInsights />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/contracts" element={<ContractsList />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/calendar" element={<CalendarView />} />
-                  
-                  {/* Admin center */}
-                  <Route 
-                    path="/admin" 
-                    element={
-                      <ProtectedRoute allowedRoles={['Administrator']}>
-                        <AdminPanel />
-                      </ProtectedRoute>
-                    } 
-                  />
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/equipment" element={<EquipmentList />} />
+                    <Route path="/maintenance" element={<MaintenanceList />} />
+                    <Route path="/breakdowns" element={<BreakdownList />} />
+                    <Route path="/calibration" element={<CalibrationList />} />
+                    <Route path="/inventory" element={<PartsInventory />} />
+                    <Route path="/insights" element={<AIInsights />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/contracts" element={<ContractsList />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/calendar" element={<CalendarView />} />
+                    
+                    {/* Admin center */}
+                    <Route 
+                      path="/admin" 
+                      element={
+                        <ProtectedRoute allowedRoles={['Administrator']}>
+                          <AdminPanel />
+                        </ProtectedRoute>
+                      } 
+                    />
 
-                  {/* Fallback */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                    {/* Fallback */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
               </main>
             </div>
           </div>
@@ -182,13 +200,15 @@ const AppContent: React.FC = () => {
       ) : (
         /* Auth Screen views */
         <div className="flex-1">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/admin-login" element={<AdminLogin />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </Suspense>
         </div>
       )}
     </div>
