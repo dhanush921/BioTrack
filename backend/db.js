@@ -53,12 +53,21 @@ function writeCollectionLocal(collection, data) {
   }
 }
 
+const lastSync = {};
+const CACHE_TTL = 5000; // 5 seconds cache TTL
+
 // Initialize cache
-export async function syncWithFirestore() {
+export async function syncWithFirestore(force = false) {
   const collections = ['users', 'equipment', 'maintenance', 'breakdowns', 'contracts', 'inventory', 'logs'];
   
   if (firestoreDb) {
+    const now = Date.now();
     await Promise.all(collections.map(async (col) => {
+      // If not forced and cache is still fresh (within TTL), skip fetching
+      if (!force && lastSync[col] && (now - lastSync[col] < CACHE_TTL)) {
+        return;
+      }
+      
       try {
         const snapshot = await firestoreDb.collection(col).get();
         if (snapshot.empty) {
@@ -87,6 +96,7 @@ export async function syncWithFirestore() {
           // Sync back to local JSON for offline caching
           writeCollectionLocal(col, firestoreDocs);
         }
+        lastSync[col] = Date.now();
       } catch (err) {
         console.error(`[Firebase] Failed to sync collection "${col}":`, err.message);
         // Fallback to local files
@@ -107,6 +117,7 @@ export const pendingPromises = [];
 // Background write updater - returns promise so callers can await persistence
 async function persistDoc(collection, docId, data) {
   writeCollectionLocal(collection, cache[collection]);
+  lastSync[collection] = Date.now(); // Cache is fresh after mutation
   if (firestoreDb) {
     try {
       await firestoreDb.collection(collection).doc(docId).set(data);
@@ -118,6 +129,7 @@ async function persistDoc(collection, docId, data) {
 
 async function persistDeleteDoc(collection, docId) {
   writeCollectionLocal(collection, cache[collection]);
+  lastSync[collection] = Date.now(); // Cache is fresh after mutation
   if (firestoreDb) {
     try {
       await firestoreDb.collection(collection).doc(docId).delete();
