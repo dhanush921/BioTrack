@@ -36,6 +36,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = async () => {
+      // MIGRATION: move old localStorage token to sessionStorage (one-time, per tab)
+      const legacyToken = localStorage.getItem('biotrack_token');
+      if (legacyToken && !sessionStorage.getItem('biotrack_token')) {
+        // Move the old token into this tab's session
+        sessionStorage.setItem('biotrack_token', legacyToken);
+      }
+      // Always clear from localStorage so multi-tab isolation works going forward
+      localStorage.removeItem('biotrack_token');
+
       const token = sessionStorage.getItem('biotrack_token');
       if (token) {
         try {
