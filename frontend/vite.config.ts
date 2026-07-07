@@ -15,26 +15,28 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    // Increase limit to reduce warnings (actual splitting done via manualChunks)
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         // Split vendor libraries into separate cacheable chunks
-        manualChunks: {
-          // React core
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // Chart library (very large)
-          'vendor-recharts': ['recharts'],
-          // Icon library
-          'vendor-lucide': ['lucide-react'],
-          // PDF/export utilities
-          'vendor-pdf': ['jspdf'],
-          // Excel export
-          'vendor-xlsx': ['xlsx'],
-          // QR code scanner
-          'vendor-qr': ['html5-qrcode', 'qrcode'],
-          // Firebase client
-          'vendor-firebase': ['firebase'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('recharts') || id.includes('d3-') || id.includes('victory-')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            if (id.includes('jspdf') || id.includes('html2canvas')) {
+              return 'vendor-pdf';
+            }
+            if (id.includes('firebase')) {
+              return 'vendor-firebase';
+            }
+          }
         }
       }
     }
