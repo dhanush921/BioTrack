@@ -140,7 +140,7 @@ const AppContent: React.FC = () => {
               <div className="pt-4 flex gap-2">
                 <button
                   onClick={() => {
-                    localStorage.removeItem('biotrack_token');
+                    sessionStorage.removeItem('biotrack_token');
                     window.location.reload();
                   }}
                   className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold border border-white/5 transition-all"

@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('biotrack_token');
+      const token = sessionStorage.getItem('biotrack_token');
       if (token) {
         try {
           const profile = await api.get('/auth/me');
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const data = await api.post('/auth/login', { email, password });
-      localStorage.setItem('biotrack_token', data.token);
+      sessionStorage.setItem('biotrack_token', data.token);
       setUser(data.user);
     } finally {
       setLoading(false);
@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const data = await api.post('/auth/signup', { email, password, name, role, department });
-      localStorage.setItem('biotrack_token', data.token);
+      sessionStorage.setItem('biotrack_token', data.token);
       setUser(data.user);
     } finally {
       setLoading(false);
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    localStorage.removeItem('biotrack_token');
+    sessionStorage.removeItem('biotrack_token');
     setUser(null);
   };
 

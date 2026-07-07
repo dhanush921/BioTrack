@@ -32,7 +32,7 @@ export const AdminLogin: React.FC = () => {
       const profile = await api.get('/auth/me');
       
       if (profile.role !== 'Administrator') {
-        localStorage.removeItem('biotrack_token');
+        sessionStorage.removeItem('biotrack_token');
         toast.error('Access Denied: This portal is restricted to System Administrators.');
         setLoading(false);
         return;
@@ -109,7 +109,7 @@ export const AdminLogin: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 className="w-full pl-10 pr-4 py-2.5 border border-white/5 bg-slate-950/30 rounded-xl text-sm focus:outline-none focus:border-amber-500/50 transition-colors placeholder:text-slate-600"
               />
             </div>

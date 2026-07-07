@@ -2,7 +2,7 @@ const API_BASE_URL = window.location.origin.includes('localhost:5173') ? 'http:/
 
 // Helper to get local JWT token
 function getAuthToken() {
-  return localStorage.getItem('biotrack_token');
+  return sessionStorage.getItem('biotrack_token');
 }
 
 // Global fetch wrapper with credentials & headers
